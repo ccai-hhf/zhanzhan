@@ -246,7 +246,10 @@ struct AppearanceSettingsPane: View {
   }
 }
 
+#if !SWIFT_PACKAGE
 #Preview {
   AppearanceSettingsPane()
     .environment(\.locale, .init(identifier: "en"))
 }
+
+#endif

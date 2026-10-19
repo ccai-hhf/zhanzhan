@@ -45,6 +45,7 @@ struct SearchFieldView: View {
   }
 }
 
+#if !SWIFT_PACKAGE
 #Preview {
   return List {
     SearchFieldView(placeholder: "search_placeholder", query: .constant(""))
@@ -53,3 +54,5 @@ struct SearchFieldView: View {
   .frame(width: 300)
   .environment(\.locale, .init(identifier: "en"))
 }
+
+#endif

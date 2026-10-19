@@ -66,7 +66,10 @@ struct IgnorePasteboardTypesSettingsView: View {
   }
 }
 
+#if !SWIFT_PACKAGE
 #Preview {
   IgnorePasteboardTypesSettingsView()
     .environment(\.locale, .init(identifier: "en"))
 }
+
+#endif

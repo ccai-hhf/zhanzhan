@@ -21,7 +21,10 @@ struct IgnoreSettingsPane: View {
   }
 }
 
+#if !SWIFT_PACKAGE
 #Preview {
   IgnoreSettingsPane()
     .environment(\.locale, .init(identifier: "en"))
 }
+
+#endif

@@ -1,39 +1,14 @@
-import Sparkle
+import AppKit
+import Observation
 
+/// Local builds must not install an upstream release over the fork.
 @Observable
 class SoftwareUpdater {
-  var automaticallyChecksForUpdates = false {
-    didSet {
-      updater.automaticallyChecksForUpdates = automaticallyChecksForUpdates
-    }
-  }
-
-  private var updater: SPUUpdater
-  private var automaticallyChecksForUpdatesObservation: NSKeyValueObservation?
-
-  private let updaterController = SPUStandardUpdaterController(
-    startingUpdater: true,
-    updaterDelegate: nil,
-    userDriverDelegate: nil
-  )
-
-  init() {
-    updater = updaterController.updater
-    automaticallyChecksForUpdatesObservation = updater.observe(
-      \.automaticallyChecksForUpdates,
-      options: [.initial, .new, .old]
-    ) { [unowned self] _, change in
-      guard change.newValue != change.oldValue, let newValue = change.newValue else {
-        return
-      }
-
-      MainActor.assumeIsolated {
-        self.automaticallyChecksForUpdates = newValue
-      }
-    }
-  }
-
+  var automaticallyChecksForUpdates = false
   func checkForUpdates() {
-    updater.checkForUpdates()
+    let alert = NSAlert()
+    alert.messageText = "沾沾 · 本地构建"
+    alert.informativeText = "此版本通过本地构建更新，不连接 Maccy 的自动更新服务。"
+    alert.runModal()
   }
 }

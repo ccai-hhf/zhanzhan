@@ -1,11 +1,14 @@
 import AppKit
 import Defaults
 import Sauce
-import SwiftData
+import Observation
+import ShelfCore
 import Vision
 
-@Model
-class HistoryItem {
+@Observable
+class HistoryItem: Identifiable, Equatable {
+  var id = UUID()
+  static func == (lhs: HistoryItem, rhs: HistoryItem) -> Bool { lhs.id == rhs.id }
   @MainActor
   static var supportedPins: Set<String> {
     // "a" reserved for select all
@@ -80,15 +83,13 @@ class HistoryItem {
   var numberOfCopies: Int = 1
   var pin: String?
   var title = ""
+  var shelfRank: Double = 0
 
-  @Relationship(deleteRule: .cascade, inverse: \HistoryItemContent.item)
   var contents: [HistoryItemContent] = []
 
-  @Transient private var cachedDecodedImage: NSImage?
+  @ObservationIgnored private var cachedDecodedImage: NSImage?
 
   init(contents: [HistoryItemContent] = []) {
-    self.firstCopiedAt = firstCopiedAt
-    self.lastCopiedAt = lastCopiedAt
     self.contents = contents
   }
 
@@ -112,7 +113,8 @@ class HistoryItem {
           imageData: pasteboardImageData,
           fileURL: universalClipboardImageURL
         ) {
-          self.title = recognizedText
+          self.title = recognizedText.removingScalarsUnsafeForTitleLayout()
+          Storage.shared.persist()
         }
       }
       return ""
@@ -275,5 +277,23 @@ class HistoryItem {
     return observations
       .compactMap { $0.topCandidates(1).first?.string }
       .joined(separator: "\n")
+  }
+}
+
+// The standalone fork stores snapshots without requiring Xcode's SwiftData macros.
+extension HistoryItem {
+  var record: HistoryRecord {
+    HistoryRecord(id: id, application: application, firstCopiedAt: firstCopiedAt,
+                  lastCopiedAt: lastCopiedAt, numberOfCopies: numberOfCopies, pin: pin,
+                  title: title, rank: shelfRank,
+                  contents: contents.compactMap { content in
+                    content.value.map { ShelfContent(type: content.type, value: $0) }
+                  })
+  }
+  convenience init(record: HistoryRecord) {
+    self.init(contents: record.contents.map { HistoryItemContent(type: $0.type, value: $0.value) })
+    id = record.id; application = record.application; firstCopiedAt = record.firstCopiedAt
+    lastCopiedAt = record.lastCopiedAt; numberOfCopies = record.numberOfCopies
+    pin = record.pin; title = record.title; shelfRank = record.rank
   }
 }

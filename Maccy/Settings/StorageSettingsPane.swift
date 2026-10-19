@@ -126,7 +126,10 @@ struct StorageSettingsPane: View {
   }
 }
 
+#if !SWIFT_PACKAGE
 #Preview {
   StorageSettingsPane()
     .environment(\.locale, .init(identifier: "en"))
 }
+
+#endif

@@ -23,13 +23,9 @@ struct GeneralSettingsPane: View {
         LaunchAtLogin.Toggle {
           Text("LaunchAtLogin", tableName: "GeneralSettings")
         }
-        Toggle(isOn: $updater.automaticallyChecksForUpdates) {
-          Text("CheckForUpdates", tableName: "GeneralSettings")
-        }
-        Button(
-          action: { updater.checkForUpdates() },
-          label: { Text("CheckNow", tableName: "GeneralSettings") }
-        )
+        Text("沾沾本地版本 · 不自动更新")
+          .font(.caption).foregroundStyle(.secondary)
+
       }
 
       Settings.Section(label: { Text("Open", tableName: "GeneralSettings") }) {
@@ -122,7 +118,10 @@ struct GeneralSettingsPane: View {
   }
 }
 
+#if !SWIFT_PACKAGE
 #Preview {
   GeneralSettingsPane()
     .environment(\.locale, .init(identifier: "en"))
 }
+
+#endif

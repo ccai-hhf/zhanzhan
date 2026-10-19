@@ -51,7 +51,10 @@ struct IgnoreRegexpsSettingsView: View {
   }
 }
 
+#if !SWIFT_PACKAGE
 #Preview {
   IgnoreRegexpsSettingsView()
     .environment(\.locale, .init(identifier: "en"))
 }
+
+#endif

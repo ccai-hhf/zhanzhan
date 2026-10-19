@@ -1,96 +1,71 @@
-import AppKit.NSPasteboard
+import AppKit
 import Foundation
-import SwiftData
+import ShelfCore
 
 @MainActor
-class Storage {
+final class Storage {
   static let shared = Storage()
+  var items: [HistoryItem] = []
+  private var archive: HistoryArchive?
+  private var loadError: Error?
+  private let url = URL.applicationSupportDirectory.appending(path: "ZhanZhan/History.json")
 
-  var container: ModelContainer
-  var context: ModelContext { container.mainContext }
   var size: String {
-    guard let size = try? url.resourceValues(forKeys: [.fileSizeKey]).allValues.first?.value as? Int64, size > 1 else {
-      return ""
-    }
-
-    return ByteCountFormatter().string(fromByteCount: size)
+    let bytes = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+    return ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .file)
   }
-
-  private let url = URL.applicationSupportDirectory.appending(path: "Maccy/Storage.sqlite")
 
   init() {
-    var config = ModelConfiguration(url: url)
-
-    #if DEBUG
-    if AppDelegate.isTesting {
-      config = ModelConfiguration(isStoredInMemoryOnly: true)
-    }
-    #endif
-
     do {
-      container = try ModelContainer(for: HistoryItem.self, configurations: config)
-    } catch let error {
-      fatalError("Cannot load database: \(error.localizedDescription).")
+      let archive = try HistoryArchive(url: url)
+      self.archive = archive
+      items = archive.records.map(HistoryItem.init(record:))
+    } catch { loadError = error }
+  }
+
+  func loadItems() throws -> [HistoryItem] {
+    if let loadError { throw loadError }
+    return items
+  }
+  func insert(_ item: HistoryItem) { if !items.contains(item) { items.append(item) } }
+  func delete(_ item: HistoryItem) { items.removeAll { $0 == item } }
+  func processPendingChanges() {}
+
+  func save() throws {
+    if let loadError { throw loadError }
+    guard var archive else { return }
+    try archive.replace(with: items.map(\.record))
+    self.archive = archive
+  }
+
+  @discardableResult
+  func persist() -> Bool {
+    do { try save(); return true }
+    catch {
+      items = archive?.records.map(HistoryItem.init(record:)) ?? []
+      ShelfState.shared.errorMessage = "历史未能保存，已保留上次成功保存的数据：\(error.localizedDescription)"
+      Task { try? await History.shared.load() }
+      return false
     }
   }
 
-  func cleanupOrphanedContents() throws -> Int {
-    let descriptor = FetchDescriptor<HistoryItemContent>(
-      predicate: #Predicate { $0.item == nil }
-    )
-    let count = try context.fetchCount(descriptor)
-    guard count > 0 else {
-      return 0
+  func cleanupOrphanedContents() throws -> Int { 0 }
+  func removeUnpersistableContents() throws -> Int {
+    var count = 0
+    for item in items {
+      let before = item.contents.count
+      item.contents.removeAll { !Clipboard.shared.isPersistable(NSPasteboard.PasteboardType($0.type)) }
+      count += before - item.contents.count
     }
-
-    try context.delete(
-      model: HistoryItemContent.self,
-      where: #Predicate { $0.item == nil }
-    )
-    context.processPendingChanges()
-    try context.save()
-
+    if count > 0 { try save() }
     return count
   }
-
-  func removeUnpersistableContents() throws -> Int {
-    let contents = try context.fetch(FetchDescriptor<HistoryItemContent>())
-    let unwanted = contents.filter {
-      !Clipboard.shared.isPersistable(NSPasteboard.PasteboardType($0.type))
-    }
-
-    guard !unwanted.isEmpty else {
-      return 0
-    }
-
-    unwanted.forEach(context.delete)
-    context.processPendingChanges()
-    try context.save()
-
-    return unwanted.count
-  }
-
-  // Titles stored before the sanitization in `HistoryItem.generateTitle()` may
-  // contain scalars that hang CoreText on macOS 26. Such an item makes Maccy
-  // spin at 100% CPU on every launch without ever drawing its window, so the
-  // store has to be healed before the history is first rendered.
-  // See https://github.com/p0deje/Maccy/issues/1520.
   func sanitizeTitles() throws -> Int {
-    let items = try context.fetch(FetchDescriptor<HistoryItem>())
     var count = 0
-
     for item in items where item.title.containsScalarsUnsafeForTitleLayout {
-      item.title = item.title.removingScalarsUnsafeForTitleLayout()
-      count += 1
+      item.title = item.title.removingScalarsUnsafeForTitleLayout(); count += 1
     }
-
-    guard count > 0 else {
-      return 0
-    }
-
-    context.processPendingChanges()
-    try context.save()
-
+    if count > 0 { try save() }
     return count
   }
 }

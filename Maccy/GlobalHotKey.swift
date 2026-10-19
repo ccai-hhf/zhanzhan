@@ -6,8 +6,20 @@ import SwiftUI
 class GlobalHotKey {
   typealias Handler = () -> Void
 
-  static public var key: KeyEquivalent? { KeyboardShortcuts.Shortcut(name: .popup)?.toKeyEquivalent() }
-  static public var modifierFlags: EventModifiers? { KeyboardShortcuts.Shortcut(name: .popup)?.toEventModifiers() }
+  static public var key: KeyEquivalent? { {
+    guard let shortcut = KeyboardShortcuts.Shortcut(name: .popup),
+          let key = Sauce.shared.character(for: shortcut.carbonKeyCode, modifiers: .cocoa([]))?.first else { return nil }
+    return KeyEquivalent(key)
+  }() }
+  static public var modifierFlags: EventModifiers? { {
+    guard let shortcut = KeyboardShortcuts.Shortcut(name: .popup) else { return nil }
+    var result: EventModifiers = []
+    if shortcut.modifiers.contains(.command) { result.insert(.command) }
+    if shortcut.modifiers.contains(.shift) { result.insert(.shift) }
+    if shortcut.modifiers.contains(.option) { result.insert(.option) }
+    if shortcut.modifiers.contains(.control) { result.insert(.control) }
+    return result
+  }() }
 
   private var handler: Handler
 

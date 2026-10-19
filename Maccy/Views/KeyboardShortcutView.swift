@@ -27,6 +27,7 @@ struct KeyboardShortcutView: View {
   }
 }
 
+#if !SWIFT_PACKAGE
 #Preview {
   List {
     KeyboardShortcutView(shortcut: KeyShortcut(key: .a, modifierFlags: [.command]))
@@ -39,3 +40,5 @@ struct KeyboardShortcutView: View {
     KeyboardShortcutView(shortcut: KeyShortcut(key: .c, modifierFlags: [.command, .option]))
   }
 }
+
+#endif

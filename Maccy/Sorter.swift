@@ -5,6 +5,7 @@ import Defaults
 // swiftlint:disable type_name
 class Sorter {
   enum By: String, CaseIterable, Identifiable, CustomStringConvertible, Defaults.Serializable {
+    case manual
     case lastCopiedAt
     case firstCopiedAt
     case numberOfCopies
@@ -13,6 +14,8 @@ class Sorter {
 
     var description: String {
       switch self {
+      case .manual:
+        return "手动卡片顺序"
       case .lastCopiedAt:
         return NSLocalizedString("LastCopiedAt", tableName: "StorageSettings", comment: "")
       case .firstCopiedAt:
@@ -55,6 +58,8 @@ class Sorter {
 
   private func bySortingAlgorithm(_ lhs: HistoryItem, _ rhs: HistoryItem, _ by: By) -> Bool {
     switch by {
+    case .manual:
+      return lhs.shelfRank == rhs.shelfRank ? lhs.lastCopiedAt > rhs.lastCopiedAt : lhs.shelfRank > rhs.shelfRank
     case .firstCopiedAt:
       return lhs.firstCopiedAt > rhs.firstCopiedAt
     case .numberOfCopies:

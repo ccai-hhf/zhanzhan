@@ -3,6 +3,7 @@ import Defaults
 import Foundation
 
 enum PopupPosition: String, CaseIterable, Identifiable, CustomStringConvertible, Defaults.Serializable {
+  case bottom
   case cursor
   case statusItem
   case window
@@ -13,6 +14,8 @@ enum PopupPosition: String, CaseIterable, Identifiable, CustomStringConvertible,
 
   var description: String {
     switch self {
+    case .bottom:
+      return "屏幕底部"
     case .cursor:
       return NSLocalizedString("PopupAtCursor", tableName: "AppearanceSettings", comment: "")
     case .statusItem:
@@ -28,6 +31,11 @@ enum PopupPosition: String, CaseIterable, Identifiable, CustomStringConvertible,
 
   func origin(size: NSSize, statusBarButton: NSStatusBarButton?) -> NSPoint {
     switch self {
+    case .bottom:
+      let screen = NSScreen.screens.first { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) } ?? NSScreen.main
+      if let frame = screen?.visibleFrame {
+        return NSPoint(x: frame.midX - size.width / 2, y: frame.minY + 12)
+      }
     case .center:
       if let frame = NSScreen.forPopup?.visibleFrame {
         return NSRect.centered(ofSize: size, in: frame).origin

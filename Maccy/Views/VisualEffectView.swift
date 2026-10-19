@@ -31,9 +31,12 @@ struct GlassEffectView: NSViewRepresentable {
   }
 }
 
+#if !SWIFT_PACKAGE
 #Preview {
   VisualEffectView(
     material: .popover,
     blendingMode: .behindWindow
   )
 }
+
+#endif

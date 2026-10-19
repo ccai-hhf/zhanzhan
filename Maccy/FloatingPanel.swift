@@ -3,7 +3,7 @@ import SwiftUI
 
 // An NSPanel subclass that implements floating panel traits.
 // https://stackoverflow.com/questions/46023769/how-to-show-a-window-without-stealing-focus-on-macos
-class FloatingPanel<Content: View>: NSPanel, NSWindowDelegate {
+class FloatingPanel: NSPanel, NSWindowDelegate {
   var isPresented: Bool = false
   var statusBarButton: NSStatusBarButton?
   let onClose: () -> Void
@@ -13,7 +13,7 @@ class FloatingPanel<Content: View>: NSPanel, NSWindowDelegate {
     set {}
   }
 
-  init(
+  init<Content: View>(
     contentRect: NSRect,
     identifier: String = "",
     statusBarButton: NSStatusBarButton? = nil,
@@ -40,11 +40,13 @@ class FloatingPanel<Content: View>: NSPanel, NSWindowDelegate {
     // TODO: Automatically detect Chrome autofill that uses window layer 999 and set to screenSaver (1000). See #1403.
     level = .statusBar
     collectionBehavior = [.auxiliary, .stationary, .moveToActiveSpace, .fullScreenAuxiliary]
+    title = "沾沾"
     titleVisibility = .hidden
     titlebarAppearsTransparent = true
-    isMovableByWindowBackground = true
+    isMovableByWindowBackground = false
     hidesOnDeactivate = false
     backgroundColor = .clear
+    isOpaque = false
     titlebarSeparatorStyle = .none
 
     // Hide all traffic light buttons
@@ -52,19 +54,15 @@ class FloatingPanel<Content: View>: NSPanel, NSWindowDelegate {
     standardWindowButton(.miniaturizeButton)?.isHidden = true
     standardWindowButton(.zoomButton)?.isHidden = true
 
-    contentView = NSHostingView(
-      rootView: FloatingPanelRootView(
-        content: view(),
-        onWindowDragEnded: { [weak self] in
-          self?.saveWindowPosition()
-        }
-      )
-    )
+    let hostingView = NSHostingView(rootView: view().ignoresSafeArea())
+    hostingView.sizingOptions = []
+    contentView = hostingView
+    contentMinSize = NSSize(width: 900, height: 450)
     applyRoundedCorners()
   }
 
   private func applyRoundedCorners() {
-    let radius = Popup.cornerRadius + Popup.horizontalPadding
+    let radius: CGFloat = 24
 
     for view in [contentView, contentView?.superview].compactMap({ $0 }) {
       view.wantsLayer = true
@@ -85,8 +83,10 @@ class FloatingPanel<Content: View>: NSPanel, NSWindowDelegate {
   func open(height: CGFloat, at popupPosition: PopupPosition = Defaults[.popupPosition]) {
     let size = Defaults[.windowSize]
     let miniumHeight: CGFloat = AppState.shared.popup.minimumHeight
-    let finalWidth = min(frame.width, size.width)
-    let finalHeight = max(min(height, size.height), miniumHeight)
+    let activeScreen = NSScreen.screens.first { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) } ?? NSScreen.main
+    let visible = activeScreen?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1280, height: 800)
+    let finalWidth = min(max(size.width, 960), visible.width - 32)
+    let finalHeight = min(max(min(height, size.height), miniumHeight), visible.height - 24)
     setContentSize(NSSize(width: finalWidth, height: finalHeight))
     setFrameOrigin(popupPosition.origin(size: frame.size, statusBarButton: statusBarButton))
     orderFrontRegardless()
@@ -210,8 +210,10 @@ class FloatingPanel<Content: View>: NSPanel, NSWindowDelegate {
   override func resignKey() {
     super.resignKey()
     // Don't hide while a modal interaction from this panel is active.
-    if NSApp.alertWindow == nil && !AppState.shared.suppressPopupAutoClose {
-      close()
+    DispatchQueue.main.async { [weak self] in
+      guard let self, !self.isKeyWindow, self.attachedSheet == nil,
+            NSApp.alertWindow == nil, !AppState.shared.suppressPopupAutoClose else { return }
+      self.close()
     }
   }
 
@@ -230,24 +232,5 @@ class FloatingPanel<Content: View>: NSPanel, NSWindowDelegate {
   // Allow text inputs inside the panel can receive focus
   override var canBecomeKey: Bool {
     return true
-  }
-}
-
-private struct FloatingPanelRootView<Content: View>: View {
-  @State private var appState = AppState.shared
-
-  let content: Content
-  let onWindowDragEnded: () -> Void
-
-  var body: some View {
-    content
-      // The safe area is ignored because the title bar still interferes with the geometry
-      .ignoresSafeArea()
-      .gesture(
-        DragGesture()
-          .onEnded { _ in
-            onWindowDragEnded()
-          }
-      )
   }
 }

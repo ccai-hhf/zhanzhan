@@ -1,11 +1,10 @@
 import Defaults
 import KeyboardShortcuts
-import Sparkle
 import SwiftUI
 
 class AppDelegate: NSObject, NSApplicationDelegate {
   nonisolated static let isTesting = CommandLine.arguments.contains("enable-testing")
-  var panel: FloatingPanel<ContentView>!
+  var panel: FloatingPanel!
 
   @objc
   private lazy var statusItem: NSStatusItem = {
@@ -38,11 +37,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
   func applicationWillFinishLaunching(_ notification: Notification) { // swiftlint:disable:this function_body_length
     #if DEBUG
     if Self.isTesting {
-      SPUUpdater(hostBundle: Bundle.main,
-                 applicationBundle: Bundle.main,
-                 userDriver: SPUStandardUserDriver(hostBundle: Bundle.main, delegate: nil),
-                 delegate: nil)
-      .automaticallyChecksForUpdates = false
       // Start from a clean slate for the isolated testing preferences.
       UserDefaults.standard.removePersistentDomain(forName: Defaults.Keys.testingSuiteName)
     }
@@ -118,10 +112,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     ) {
       ContentView()
     }
+    Task {
+      do { try await History.shared.load() }
+      catch { ShelfState.shared.errorMessage = "历史加载失败：\(error.localizedDescription)" }
+      panel.open(height: 490, at: .bottom)
+    }
   }
 
   func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-    panel.toggle(height: AppState.shared.popup.height)
+    panel.open(height: 490, at: .bottom)
     return true
   }
 
@@ -198,7 +197,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
       return
     }
 
-    panel.toggle(height: AppState.shared.popup.height, at: .statusItem)
+    panel.toggle(height: AppState.shared.popup.height, at: .bottom)
   }
 
   private func synchronizeMenuIconText() {

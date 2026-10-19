@@ -43,7 +43,10 @@ struct AdvancedSettingsPane: View {
   }
 }
 
+#if !SWIFT_PACKAGE
 #Preview {
   AdvancedSettingsPane()
     .environment(\.locale, .init(identifier: "en"))
 }
+
+#endif

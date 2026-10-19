@@ -6,7 +6,6 @@ import Logging
 import Observation
 import Sauce
 import Settings
-import SwiftData
 
 @Observable
 class History: ItemsContainer { // swiftlint:disable:this type_body_length
@@ -124,8 +123,7 @@ class History: ItemsContainer { // swiftlint:disable:this type_body_length
 
   @MainActor
   func load() async throws {
-    let descriptor = FetchDescriptor<HistoryItem>()
-    let results = try Storage.shared.context.fetch(descriptor)
+    let results = try Storage.shared.loadItems()
     let decorators = sorter.sort(results).map { HistoryItemDecorator($0) }
     pinManager.load(from: decorators)
     allUnpinnedItems = decorators.filter(\.isUnpinned)
@@ -150,15 +148,14 @@ class History: ItemsContainer { // swiftlint:disable:this type_body_length
 
   @MainActor
   func insertIntoStorage(_ item: HistoryItem) throws {
-    logger.info("Inserting item with id '\(item.title)'")
-    Storage.shared.context.insert(item)
-    Storage.shared.context.processPendingChanges()
-    try? Storage.shared.context.save()
+    Storage.shared.insert(item)
   }
 
   @discardableResult
   @MainActor
   func add(_ item: HistoryItem) -> HistoryItemDecorator {
+    let wasInternalCopy = item.fromMaccy
+    item.shelfRank = (allUnpinnedItems.map { $0.item.shelfRank }.max() ?? 0) + 1
     if #available(macOS 15.0, *) {
       try? History.shared.insertIntoStorage(item)
     } else {
@@ -172,13 +169,14 @@ class History: ItemsContainer { // swiftlint:disable:this type_body_length
         transferContents(from: existingHistoryItem, to: item)
       }
       item.firstCopiedAt = existingHistoryItem.firstCopiedAt
+      if wasInternalCopy { item.shelfRank = existingHistoryItem.shelfRank }
       item.numberOfCopies += existingHistoryItem.numberOfCopies
       item.pin = existingHistoryItem.pin
       item.title = existingHistoryItem.title
-      if !item.fromMaccy {
+      if wasInternalCopy {
         item.application = existingHistoryItem.application
       }
-      logger.info("Removing duplicate item '\(item.title)'")
+      logger.info("Removing duplicate item")
       if let existingDecorator = firstStoredItem(where: { $0.item == existingHistoryItem }) {
         cleanup(existingDecorator)
         allUnpinnedItems.removeAll { $0 == existingDecorator }
@@ -187,10 +185,6 @@ class History: ItemsContainer { // swiftlint:disable:this type_body_length
         }
       }
       deleteFromStorage(existingHistoryItem)
-    } else {
-      Task {
-        Notifier.notify(body: item.title, sound: .write)
-      }
     }
 
     // Remove exceeding items. Do this after the item is added to avoid removing something
@@ -218,85 +212,50 @@ class History: ItemsContainer { // swiftlint:disable:this type_body_length
       updateSearchResults()
     }
     AppState.shared.popup.needsResize = true
+    Storage.shared.persist()
     return itemDecorator
   }
 
-  @MainActor
-  private func withLogging(_ msg: String, _ block: () throws -> Void) rethrows {
-    func dataCounts() -> String {
-      let historyItemCount = try? Storage.shared.context.fetchCount(FetchDescriptor<HistoryItem>())
-      let historyContentCount = try? Storage.shared.context.fetchCount(FetchDescriptor<HistoryItemContent>())
-      return "HistoryItem=\(historyItemCount ?? 0) HistoryItemContent=\(historyContentCount ?? 0)"
+  func moveCard(_ id: UUID, before target: UUID, after: Bool = false) throws {
+    guard searchQuery.isEmpty, id != target,
+          let source = allUnpinnedItems.firstIndex(where: { $0.id == id }),
+          allUnpinnedItems.contains(where: { $0.id == target }) else { return }
+    let previous = allUnpinnedItems
+    let ranks = previous.map { $0.item.shelfRank }
+    let moved = allUnpinnedItems.remove(at: source)
+    let destination = allUnpinnedItems.firstIndex(where: { $0.id == target })!
+    allUnpinnedItems.insert(moved, at: destination + (after ? 1 : 0))
+    for (index, item) in allUnpinnedItems.enumerated() {
+      item.item.shelfRank = Double(allUnpinnedItems.count - index)
     }
-
-    logger.info("\(msg) Before: \(dataCounts())")
-    try? block()
-    logger.info("\(msg) After: \(dataCounts())")
+    Defaults[.sortBy] = .manual
+    do { try Storage.shared.save() } catch {
+      allUnpinnedItems = previous
+      for (item, rank) in zip(previous, ranks) { item.item.shelfRank = rank }
+      throw error
+    }
+    updateUnpinnedShortcuts()
   }
 
   @MainActor
   func clear() {
-    withLogging("Clearing history") {
-      allUnpinnedItems.forEach(cleanup)
-      allUnpinnedItems.removeAll()
-      filteredUnpinnedItems.removeAll()
-      sessionLog.removeValues { $0.pin == nil }
-
-      try? Storage.shared.context.transaction {
-        try? Storage.shared.context.delete(
-          model: HistoryItem.self,
-          where: #Predicate { $0.pin == nil }
-        )
-        try? Storage.shared.context.delete(
-          model: HistoryItemContent.self,
-          where: #Predicate { $0.item?.pin == nil }
-        )
-      }
-      Storage.shared.context.processPendingChanges()
-      try? Storage.shared.context.save()
-    }
-
-    Clipboard.shared.clear()
-    AppState.shared.popup.close()
-    Task {
-      AppState.shared.popup.needsResize = true
-    }
+    clearRecords(includingPinned: false)
   }
 
   @MainActor
   func clearAll() {
-    withLogging("Clearing all history") {
-      allPinnedItems.forEach(cleanup)
-      allUnpinnedItems.forEach(cleanup)
-      allUnpinnedItems.removeAll()
-      filteredPinnedItems.removeAll()
-      filteredUnpinnedItems.removeAll()
-      pinManager.removeAll()
-      sessionLog.removeAll()
+    clearRecords(includingPinned: true)
+  }
 
-      do {
-        let context = Storage.shared.context
-        try context.transaction {
-          // Bulk deletion cannot remove children with live inverse relationships.
-          try context.delete(
-            model: HistoryItemContent.self,
-            where: #Predicate { $0.item == nil }
-          )
-          try context.delete(model: HistoryItem.self)
-          try context.delete(model: HistoryItemContent.self)
-        }
-      } catch {
-        logger.error("Failed to clear storage: \(String(reflecting: error))")
-      }
-      Storage.shared.context.processPendingChanges()
-      try? Storage.shared.context.save()
-    }
-
-    Clipboard.shared.clear()
-    AppState.shared.popup.close()
-    Task {
-      AppState.shared.popup.needsResize = true
-    }
+  private func clearRecords(includingPinned: Bool) {
+    Storage.shared.items.removeAll { includingPinned || $0.pin == nil }
+    guard Storage.shared.persist() else { return }
+    allUnpinnedItems.forEach(cleanup)
+    allUnpinnedItems.removeAll()
+    filteredUnpinnedItems.removeAll()
+    if includingPinned { allPinnedItems.forEach(cleanup); pinManager.removeAll(); filteredPinnedItems.removeAll() }
+    sessionLog.removeValues { includingPinned || $0.pin == nil }
+    updateUnpinnedShortcuts()
   }
 
   @MainActor
@@ -304,11 +263,8 @@ class History: ItemsContainer { // swiftlint:disable:this type_body_length
     guard let item else { return }
 
     cleanup(item)
-    withLogging("Removing history item") {
-      deleteFromStorage(item.item)
-      Storage.shared.context.processPendingChanges()
-      try? Storage.shared.context.save()
-    }
+    deleteFromStorage(item.item)
+    guard Storage.shared.persist() else { return }
 
     pinManager.remove(item)
     allUnpinnedItems.removeAll { $0 == item }
@@ -332,12 +288,12 @@ class History: ItemsContainer { // swiftlint:disable:this type_body_length
   @MainActor
   private func deleteFromStorage(_ item: HistoryItem) {
     deleteContents(of: item)
-    Storage.shared.context.delete(item)
+    Storage.shared.delete(item)
   }
 
   @MainActor
   private func deleteContents(of item: HistoryItem) {
-    item.contents.forEach(Storage.shared.context.delete)
+    item.contents = []
   }
 
   @MainActor

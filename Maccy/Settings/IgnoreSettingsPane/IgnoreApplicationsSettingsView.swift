@@ -88,7 +88,10 @@ struct IgnoreApplicationsSettingsView: View {
   }
 }
 
+#if !SWIFT_PACKAGE
 #Preview {
   IgnoreApplicationsSettingsView()
     .environment(\.locale, .init(identifier: "en"))
 }
+
+#endif

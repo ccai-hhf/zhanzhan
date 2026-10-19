@@ -38,7 +38,7 @@ class Popup {
   }
 
   var needsResize = false
-  var height: CGFloat = 0
+  var height: CGFloat = 490
   var headerHeight: CGFloat = 0
   var extraTopHeight: CGFloat = 0
   var extraBottomHeight: CGFloat = 0
@@ -46,7 +46,7 @@ class Popup {
 
   var minimumHeight: CGFloat {
     // Reserve space for 3 items
-    return suitableHeight(for: 3 * Popup.itemHeight)
+    return 450
   }
 
   private var eventsMonitor: Any?
@@ -122,28 +122,12 @@ class Popup {
   private func handleFirstKeyDown() {
     guard !AppState.shared.isEditingItem else { return }
 
-    if isClosed() {
-      open(height: height)
-      state = .opening
-      KeyboardShortcuts.disable(.popup)  // Handle events via eventsMonitor. Re-enable on popup close
-      return
-    }
-
-    // Maccy was not opened via shortcut. We assume toggle mode and close it
-    close()
+    if isClosed() { open(height: 490, at: .bottom) }
+    else { close() }
   }
 
   private func handleEvent(_ event: NSEvent) -> NSEvent? {
-    guard !AppState.shared.isEditingItem else { return event }
-
-    switch event.type {
-    case .keyDown:
-      return handleKeyDown(event)
-    case .flagsChanged:
-      return handleFlagsChanged(event)
-    default:
-      return event
-    }
+    return event
   }
 
   private func handleKeyDown(_ event: NSEvent) -> NSEvent? {
