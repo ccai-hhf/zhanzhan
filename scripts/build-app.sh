@@ -16,6 +16,7 @@ for locale in Maccy/*.lproj; do
   ditto "$locale" "$app_dir/Contents/Resources/$(basename "$locale")"
 done
 cp Maccy/Sounds/*.caf "$app_dir/Contents/Resources/"
+cp NativeTouch/LICENSE "$app_dir/Contents/Resources/OpenMultitouchSupport-LICENSE.txt"
 cp LICENSE "$app_dir/Contents/Resources/Maccy-LICENSE.txt"
 cp Vendor/KeyboardShortcuts/license "$app_dir/Contents/Resources/KeyboardShortcuts-LICENSE.txt"
 python3 - "$app_dir" <<'PY'
@@ -24,7 +25,7 @@ app = pathlib.Path(sys.argv[1])
 info = {
   'CFBundleName': '沾沾', 'CFBundleDisplayName': '沾沾',
   'CFBundleExecutable': 'ZhanZhan', 'CFBundleIdentifier': 'local.zhanzhan.clipboard',
-  'CFBundlePackageType': 'APPL', 'CFBundleShortVersionString': '0.1.0', 'CFBundleVersion': '1',
+  'CFBundlePackageType': 'APPL', 'CFBundleShortVersionString': '0.2.0', 'CFBundleVersion': '2',
   'CFBundleDevelopmentRegion': 'zh-Hans', 'CFBundleIconFile': 'ZhanZhan',
   'LSMinimumSystemVersion': '14.0', 'LSUIElement': True,
   'NSPrincipalClass': 'NSApplication',

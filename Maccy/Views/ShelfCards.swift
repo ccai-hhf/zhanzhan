@@ -8,11 +8,14 @@ struct ShelfHistoryCard: View {
   let shelf: ShelfState
   let selected: Bool
   @Environment(\.colorScheme) private var scheme
+  @State private var hovering = false
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   var body: some View {
     VStack(spacing: 0) {
       HStack(spacing: 6) {
-        Image(systemName: item.hasImage ? "photo" : item.hasFileURLs ? "doc" : "doc.text")
+        Image(systemName: selected ? "checkmark.circle.fill" : item.hasImage ? "photo" : item.hasFileURLs ? "doc" : "doc.text")
+          .foregroundStyle(selected ? Color.blue : Color.secondary)
         Text(item.application ?? "剪贴板").lineLimit(1)
         Spacer()
         Button { shelf.deleteHistory(item) } label: {
@@ -20,8 +23,7 @@ struct ShelfHistoryCard: View {
         }.buttonStyle(.plain).help("删除记录").accessibilityLabel("删除记录")
       }.font(.system(size: 10)).foregroundStyle(.secondary).padding(.horizontal, 12).frame(height: 34)
       Button {
-        shelf.selectedHistoryID = item.id
-        shelf.use(item.item, paste: !NSEvent.modifierFlags.contains(.option) && Defaults[.pasteByDefault])
+        shelf.choose(item.item)
       } label: {
         Group {
           if let image = item.item.image {
@@ -37,7 +39,11 @@ struct ShelfHistoryCard: View {
           }
         }.frame(maxWidth: .infinity, maxHeight: .infinity).padding(.horizontal, 14).padding(.vertical, 10)
           .contentShape(Rectangle())
-      }.buttonStyle(.plain).accessibilityLabel("粘贴：\(String(item.title.prefix(40)))")
+      }.buttonStyle(ShelfPressStyle())
+        .simultaneousGesture(TapGesture(count: 2).onEnded {
+          shelf.use(item.item, paste: Defaults[.pasteByDefault])
+        })
+        .accessibilityLabel("选择并复制：\(String(item.title.prefix(40)))")
       HStack {
         Text(item.item.lastCopiedAt, style: .relative).lineLimit(1)
         Spacer()
@@ -47,9 +53,14 @@ struct ShelfHistoryCard: View {
         .overlay(alignment: .top) { Divider().opacity(0.25) }
     }
     .frame(width: 218, height: 193)
-    .background(.white.opacity(scheme == .dark ? 0.055 : 0.37), in: RoundedRectangle(cornerRadius: 16))
-    .overlay(RoundedRectangle(cornerRadius: 16).stroke(selected ? .blue.opacity(0.7) : .white.opacity(0.35), lineWidth: 1))
-    .shadow(color: .black.opacity(0.035), radius: 5, y: 2)
+    .background(cardFill, in: RoundedRectangle(cornerRadius: 16))
+    .overlay(RoundedRectangle(cornerRadius: 16).stroke(selected ? Color.blue : .white.opacity(hovering ? 0.8 : 0.35), lineWidth: selected ? 2.5 : 1))
+    .shadow(color: selected ? .blue.opacity(0.2) : .black.opacity(0.07), radius: selected ? 12 : 5, y: selected ? 3 : 2)
+    .offset(y: hovering && !reduceMotion ? -2 : 0)
+    .onHover { hovering = $0 }
+    .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: selected)
+    .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: hovering)
+    .accessibilityAddTraits(selected ? [.isSelected] : [])
     .contextMenu {
       Button("仅复制") { shelf.use(item.item, paste: false) }
       Menu("收藏到") {
@@ -59,6 +70,11 @@ struct ShelfHistoryCard: View {
       Button("删除", role: .destructive) { shelf.deleteHistory(item) }
     }
   }
+
+  private var cardFill: Color {
+    if scheme == .dark { return selected ? Color(red: 0.18, green: 0.32, blue: 0.5) : .white.opacity(hovering ? 0.16 : 0.09) }
+    return selected ? Color(red: 0.91, green: 0.96, blue: 1) : .white.opacity(hovering ? 0.75 : 0.50)
+  }
 }
 
 struct ShelfFavoriteCard: View {
@@ -66,6 +82,10 @@ struct ShelfFavoriteCard: View {
   let shelf: ShelfState
   let edit: () -> Void
   @Environment(\.colorScheme) private var scheme
+  @State private var hovering = false
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+  private var selected: Bool { shelf.selectedFavoriteID == entry.id }
 
   private var image: NSImage? {
     entry.contents.first { ["public.png", "public.tiff", "public.jpeg", "public.heic"].contains($0.type) }
@@ -79,13 +99,16 @@ struct ShelfFavoriteCard: View {
         else { Image(systemName: entry.webURL == nil ? "text.alignleft" : "link").foregroundStyle(.blue) }
       }.frame(width: 30, height: 30).background(.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 9))
         .clipShape(RoundedRectangle(cornerRadius: 9))
-      Button { shelf.use(shelf.historyItem(for: entry), paste: false) } label: {
+      Button { shelf.chooseFavorite(entry) } label: {
         VStack(alignment: .leading, spacing: 4) {
           Text(entry.title).font(.system(size: 11, weight: .semibold)).lineLimit(1)
           Text(entry.webURL?.host ?? (image == nil ? "文字片段" : "图片"))
             .font(.system(size: 9)).foregroundStyle(.secondary).lineLimit(1)
         }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
-      }.buttonStyle(.plain).help("复制收藏内容")
+      }.buttonStyle(ShelfPressStyle()).help("单击选中并复制，双击粘贴")
+        .simultaneousGesture(TapGesture(count: 2).onEnded {
+          shelf.use(shelf.historyItem(for: entry), paste: Defaults[.pasteByDefault])
+        })
       VStack(spacing: 10) {
         Button { shelf.deleteFavorite(entry) } label: { Image(systemName: "xmark").font(.system(size: 8)).frame(width: 16, height: 16) }
           .buttonStyle(.plain).help("删除收藏").accessibilityLabel("删除收藏")
@@ -95,8 +118,13 @@ struct ShelfFavoriteCard: View {
         }
       }.foregroundStyle(.secondary)
     }.padding(11).frame(width: 185, height: 64)
-      .background(.white.opacity(scheme == .dark ? 0.055 : 0.22), in: RoundedRectangle(cornerRadius: 13))
-      .overlay(RoundedRectangle(cornerRadius: 13).stroke(.white.opacity(0.25)))
+      .background(selected ? Color.blue.opacity(scheme == .dark ? 0.3 : 0.17) : .white.opacity(scheme == .dark ? 0.08 : hovering ? 0.7 : 0.42), in: RoundedRectangle(cornerRadius: 13))
+      .overlay(RoundedRectangle(cornerRadius: 13).stroke(selected ? Color.blue : .white.opacity(0.4), lineWidth: selected ? 2 : 1))
+      .shadow(color: selected ? .blue.opacity(0.14) : .clear, radius: 8, y: 2)
+      .onHover { hovering = $0 }
+      .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: selected)
+      .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: hovering)
+      .accessibilityAddTraits(selected ? [.isSelected] : [])
       .contextMenu {
         Button("复制") { shelf.use(shelf.historyItem(for: entry), paste: false) }
         Button("粘贴") { shelf.use(shelf.historyItem(for: entry), paste: true) }
@@ -111,5 +139,15 @@ struct ShelfFavoriteCard: View {
         Divider()
         Button("删除收藏", role: .destructive) { shelf.deleteFavorite(entry) }
       }
+  }
+}
+
+struct ShelfPressStyle: ButtonStyle {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .scaleEffect(configuration.isPressed && !reduceMotion ? 0.98 : 1)
+      .brightness(configuration.isPressed ? 0.04 : 0)
+      .animation(reduceMotion ? nil : .easeOut(duration: 0.1), value: configuration.isPressed)
   }
 }

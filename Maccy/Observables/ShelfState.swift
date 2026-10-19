@@ -12,6 +12,7 @@ final class ShelfState {
   var folderSelection = "all"
   var filter = "全部"
   var selectedHistoryID: UUID?
+  var selectedFavoriteID: UUID?
   var undoAction: (() -> Void)?
   private var noticeTask: Task<Void, Never>?
 
@@ -103,13 +104,27 @@ final class ShelfState {
     return item
   }
 
-  func use(_ item: HistoryItem, paste: Bool) {
+  func choose(_ item: HistoryItem) {
+    selectedHistoryID = item.id
+    selectedFavoriteID = nil
+    use(item, paste: false, keepOpen: true)
+    announce("已复制 · 双击卡片或按回车粘贴")
+  }
+
+  func chooseFavorite(_ entry: ShelfEntry) {
+    selectedFavoriteID = entry.id
+    selectedHistoryID = nil
+    use(historyItem(for: entry), paste: false, keepOpen: true)
+    announce("已复制收藏 · 双击粘贴，网址箭头打开")
+  }
+
+  func use(_ item: HistoryItem, paste: Bool, keepOpen: Bool = false) {
     Clipboard.shared.copy(item, removeFormatting: Defaults[.removeFormattingByDefault])
     if paste && !canPaste {
       announce("已复制。开启辅助功能后可自动粘贴，也可回到原窗口按 ⌘V。")
       return
     }
-    AppState.shared.popup.close()
+    if !keepOpen { AppState.shared.popup.close() }
     if paste {
       Task {
         try? await Task.sleep(for: .milliseconds(120))

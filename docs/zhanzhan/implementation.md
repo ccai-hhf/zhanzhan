@@ -36,3 +36,20 @@
 - 修复重新打开应用误切换关闭、NSHostingView 自动压窄窗口；设置独立内容尺寸，保持横向面板。
 - UI 拖放实际鼠标验证受到窗口失焦/用户操作中断，未计作通过；排序核心回归检查通过。跨应用自动粘贴等待用户开启辅助功能后验收。
 - 上游 Xcode UI 测试未运行；未宣称 macOS 14 实机、Intel 或大量图片压力测试通过。
+
+## 0.2 更新（2026-10-19）
+
+用户反馈：卡片选中不明显、需要三指下滑、希望增强苹果磨砂质感。
+
+- 单击选择并复制，双击/回车粘贴；高亮、按下缩放、悬停反馈，尊重减少动态效果。
+- 调查发现细线视觉不够明显，且复制去重重建 ID 丢失选择。尝试稳定 ID 后实机发现旧对象清空残留，最终改为内部复制保留同一个模型和装饰对象。实际截图确认链接预览与勾选高亮稳定。
+- 默认原生 NSGlassEffectView regular，设置可切换 clear；系统旧版回退 popover 材质。
+- 三指识别通过 Core 2 项新增检查（总计10项），NativeTouch 动态链接默认设备启动成功。真实三指下滑尚待用户滑动验收。
+- 已只读查看系统触控板 → 更多手势：App Exposé 为关，未修改任何系统手势，无需此前询问的四指替换。
+- 本机 Release 安装版本 0.2.0。0.1 安装包回退副本 dist/previous/沾沾-0.1.app。
+
+参考资料：
+- https://developer.apple.com/documentation/appkit/nsglasseffectview
+- https://developer.apple.com/videos/play/wwdc2025/219/
+- https://github.com/Kyome22/OpenMultitouchSupport （15c6bb0c6a2d2858559493a28ab23f7ac58648a3）
+- https://support.apple.com/guide/mac-help/change-trackpad-settings-mchlp1226/mac

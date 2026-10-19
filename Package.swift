@@ -17,7 +17,9 @@ let package = Package(
     .package(url: "https://github.com/thii/SwiftHEXColors", exact: "1.4.1")
   ],
   targets: [
+    .target(name: "NativeTouch", path: "NativeTouch", exclude: ["LICENSE"], publicHeadersPath: "include"),
     .executableTarget(name: "Maccy", dependencies: [
+      "NativeTouch",
       .product(name: "ShelfCore", package: "Core"),
       .product(name: "Defaults", package: "Defaults"),
       .product(name: "Fuse", package: "fuse-swift"),

@@ -155,6 +155,17 @@ class History: ItemsContainer { // swiftlint:disable:this type_body_length
   @MainActor
   func add(_ item: HistoryItem) -> HistoryItemDecorator {
     let wasInternalCopy = item.fromMaccy
+    // Keep the live object/decorator when reusing a card. Replacing an equal-ID
+    // observable object leaves SwiftUI pointing at the emptied old payload.
+    if wasInternalCopy, let existing = findSimilarItem(item),
+       let decorator = firstStoredItem(where: { $0.item === existing }) {
+      Storage.shared.delete(item) // macOS 14 may have inserted the transient item already.
+      existing.lastCopiedAt = item.lastCopiedAt
+      existing.numberOfCopies += 1
+      sessionLog[Clipboard.shared.changeCount] = existing
+      Storage.shared.persist()
+      return decorator
+    }
     item.shelfRank = (allUnpinnedItems.map { $0.item.shelfRank }.max() ?? 0) + 1
     if #available(macOS 15.0, *) {
       try? History.shared.insertIntoStorage(item)
@@ -183,6 +194,9 @@ class History: ItemsContainer { // swiftlint:disable:this type_body_length
         if existingDecorator.isPinned {
           replacedPinnedItem = existingDecorator
         }
+      }
+      if ShelfState.shared.selectedHistoryID == existingHistoryItem.id {
+        ShelfState.shared.selectedHistoryID = item.id
       }
       deleteFromStorage(existingHistoryItem)
     }

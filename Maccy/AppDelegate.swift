@@ -113,6 +113,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
       ContentView()
     }
     Task {
+      for await _ in Defaults.updates(.clearGlass, initial: false) { panel.updateGlassStyle() }
+    }
+    TrackpadGesture.shared.initialize()
+    Task {
       do { try await History.shared.load() }
       catch { ShelfState.shared.errorMessage = "历史加载失败：\(error.localizedDescription)" }
       panel.open(height: 490, at: .bottom)
@@ -125,6 +129,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
   }
 
   func applicationWillTerminate(_ notification: Notification) {
+    TrackpadGesture.shared.stop()
     if Defaults[.clearOnQuit] {
       AppState.shared.history.clear()
     }

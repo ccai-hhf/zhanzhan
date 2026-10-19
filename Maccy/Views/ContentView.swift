@@ -26,7 +26,7 @@ struct ContentView: View {
       historyCards
       footer
     }
-    .background(ShelfGlassBackground())
+    .background(LinearGradient(colors: [.white.opacity(scheme == .dark ? 0.02 : 0.09), .clear], startPoint: .topLeading, endPoint: .bottomTrailing))
     .overlay(RoundedRectangle(cornerRadius: 24).stroke(.white.opacity(scheme == .dark ? 0.18 : 0.7), lineWidth: 1))
     .clipShape(RoundedRectangle(cornerRadius: 24))
     .frame(minWidth: 600)
@@ -195,7 +195,7 @@ struct ContentView: View {
           }
           ForEach(visibleHistory) { item in
             ShelfHistoryCard(item: item, shelf: shelf,
-                             selected: shelf.selectedHistoryID == item.id || (shelf.selectedHistoryID == nil && item.id == visibleHistory.first?.id))
+                             selected: shelf.selectedHistoryID == item.id)
               .id(item.id)
               .draggable("history:\(item.id.uuidString)")
               .dropDestination(for: String.self) { tokens, point in shelf.moveHistory(tokens, before: item.id, after: point.x > 109) }
@@ -212,11 +212,11 @@ struct ContentView: View {
         Text(shelf.notice).lineLimit(2)
         if shelf.undoAction != nil { Button("撤销") { shelf.undo() }.buttonStyle(.borderless) }
       } else {
-        Text("↵ 粘贴").help("未获得辅助功能权限时只复制")
+        Text("单击选中并复制 · 双击 / ↵ 粘贴").help("未获得辅助功能权限时只复制")
         Text("esc 收起")
         Label("拖动排序", systemImage: "hand.draw")
         Spacer()
-        Text("⌥ 点击仅复制 · 右键管理收藏")
+        Text("三指下滑唤起 · 右键管理收藏")
       }
       Spacer(minLength: 0)
     }.font(.system(size: 10)).foregroundStyle(.secondary)
@@ -225,18 +225,11 @@ struct ContentView: View {
   }
 
   private func pasteSelection() {
+    if let id = shelf.selectedFavoriteID, let entry = visibleFavorites.first(where: { $0.id == id }) {
+      shelf.use(shelf.historyItem(for: entry), paste: Defaults[.pasteByDefault])
+      return
+    }
     let item = visibleHistory.first { $0.id == shelf.selectedHistoryID } ?? visibleHistory.first
     if let item { shelf.use(item.item, paste: Defaults[.pasteByDefault]) }
   }
-}
-
-struct ShelfGlassBackground: NSViewRepresentable {
-  func makeNSView(context: Context) -> NSVisualEffectView {
-    let view = NSVisualEffectView()
-    view.material = .hudWindow
-    view.blendingMode = .behindWindow
-    view.state = .active
-    return view
-  }
-  func updateNSView(_ view: NSVisualEffectView, context: Context) {}
 }

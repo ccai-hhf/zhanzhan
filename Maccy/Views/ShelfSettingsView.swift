@@ -4,6 +4,9 @@ import LaunchAtLogin
 import SwiftUI
 
 struct ShelfSettingsView: View {
+  @Default(.clearGlass) private var clearGlass
+  @Default(.threeFingerSwipe) private var threeFingerSwipe
+  @State private var gestures = TrackpadGesture.shared
   @Default(.size) private var historySize
   @Default(.pasteByDefault) private var pasteByDefault
   @Default(.removeFormattingByDefault) private var removeFormatting
@@ -15,11 +18,25 @@ struct ShelfSettingsView: View {
     Form {
       Section("启动与唤起") {
         LaunchAtLogin.Toggle("登录后自动启动")
-        KeyboardShortcuts.Recorder("唤起面板", name: .popup)
+        Toggle("三指下滑唤起", isOn: $threeFingerSwipe)
+        Text(gestures.status).font(.caption).foregroundStyle(.secondary)
+        Text("若与系统“应用程序窗口”冲突，请在触控板 → 更多手势中将其改为四指下滑。")
+          .font(.caption).foregroundStyle(.secondary)
+        Button("打开触控板设置") {
+          if let url = URL(string: "x-apple.systempreferences:com.apple.Trackpad-Settings.extension") { NSWorkspace.shared.open(url) }
+        }
+        KeyboardShortcuts.Recorder("备用快捷键", name: .popup)
+      }
+      if #available(macOS 26.0, *) {
+        Section("外观") {
+          Toggle("更通透的玻璃", isOn: $clearGlass)
+          Text("关闭时加强磨砂与文字对比；开启时更多透出桌面背景。")
+            .font(.caption).foregroundStyle(.secondary)
+        }
       }
       Section("复制与粘贴") {
         Toggle("暂停记录剪贴板", isOn: $paused)
-        Toggle("点击历史卡片后自动粘贴", isOn: $pasteByDefault)
+        Toggle("双击卡片或按回车时自动粘贴", isOn: $pasteByDefault)
         Toggle("粘贴时移除文字格式", isOn: $removeFormatting)
         Button("打开辅助功能授权设置") { shelf.requestPastePermission() }
         Text("允许辅助功能后，沾沾才能向当前应用自动粘贴。也可只复制，再手动按 ⌘V。")
@@ -36,6 +53,6 @@ struct ShelfSettingsView: View {
         Text("收藏独立保存，不受历史条数限制。数据保存在本机，沾沾不会上传剪贴板。")
           .font(.caption).foregroundStyle(.secondary)
       }
-    }.formStyle(.grouped).padding(8).frame(width: 500, height: 480)
+    }.formStyle(.grouped).padding(8).frame(width: 500, height: 620)
   }
 }

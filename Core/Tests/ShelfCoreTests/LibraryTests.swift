@@ -125,6 +125,50 @@ func editingAndForwardDragPreserveContents() throws {
   try check(library.entries.map(\.id) == [a.id,b.id])
 }
 
+func threeFingerGestureRejectsOtherGestures() throws {
+  func frame(_ count: Int, _ y: Double, _ x: Double = 0.3) -> [FingerContact] {
+    (0..<count).map { .init(id: $0, x: x + Double($0) * 0.12, y: y) }
+  }
+  var detector = ThreeFingerSwipe()
+  try check(!detector.update(frame(3, 0.7), at: 1))
+  try check(!detector.update(frame(3, 0.45), at: 1.2))
+  try check(detector.update([], at: 1.25))
+  try check(!detector.update([], at: 1.3))
+  for count in [1, 2, 4] {
+    detector = ThreeFingerSwipe()
+    _ = detector.update(frame(count, 0.7), at: 1)
+    _ = detector.update(frame(count, 0.3), at: 1.2)
+    try check(!detector.update([], at: 1.25))
+  }
+  for (x,y) in [(0.7,0.7),(0.3,0.9),(0.3,0.66)] {
+    detector = ThreeFingerSwipe()
+    _ = detector.update(frame(3, 0.7), at: 1)
+    _ = detector.update(frame(3,y,x), at: 1.2)
+    try check(!detector.update([], at: 1.25))
+  }
+  detector = ThreeFingerSwipe()
+  _ = detector.update(frame(3,0.7), at: 1)
+  _ = detector.update(frame(4,0.6), at: 1.05)
+  _ = detector.update(frame(3,0.4), at: 1.2)
+  try check(!detector.update([], at: 1.3))
+}
+
+func threeFingerLiftAndCooldown() throws {
+  var detector = ThreeFingerSwipe()
+  let start = (0..<3).map { FingerContact(id: $0, x: Double($0)*0.1, y: 0.8) }
+  let end = (0..<3).map { FingerContact(id: $0, x: Double($0)*0.1, y: 0.5) }
+  _ = detector.update(start, at: 2)
+  _ = detector.update(end, at: 2.2)
+  _ = detector.update(Array(end.prefix(2)), at: 2.21)
+  try check(detector.update([], at: 2.25))
+  _ = detector.update(start, at: 2.3)
+  _ = detector.update(end, at: 2.5)
+  try check(!detector.update([], at: 2.55))
+  _ = detector.update(start, at: 4)
+  _ = detector.update(end, at: 4.2)
+  try check(detector.update([], at: 4.25))
+}
+
 private struct TestFailure: Error { let message: String }
 private func check(_ condition: @autoclosure () throws -> Bool, file: String = #fileID, line: Int = #line) throws {
   guard try condition() else { throw TestFailure(message: "Assertion failed at \(file):\(line)") }
@@ -143,7 +187,9 @@ private func expectThrows<T>(_ operation: () throws -> T) throws {
       ("failed write leaves memory unchanged", failedWriteDoesNotChangeInMemoryState),
       ("history restart, undo and independent favorites", historySnapshotsSurviveRestartAndRemainIndependent),
       ("history protects failures, corruption and future versions", historyFailureAndCorruptionAreProtected),
-      ("editing payload and forward drag", editingAndForwardDragPreserveContents)
+      ("editing payload and forward drag", editingAndForwardDragPreserveContents),
+      ("three-finger direction and contact count", threeFingerGestureRejectsOtherGestures),
+      ("three-finger lift and cooldown", threeFingerLiftAndCooldown)
     ]
     for (name, run) in checks { try run(); print("PASS: \(name)") }
     print("\(checks.count) checks passed")

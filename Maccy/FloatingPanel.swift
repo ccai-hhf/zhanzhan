@@ -56,9 +56,35 @@ class FloatingPanel: NSPanel, NSWindowDelegate {
 
     let hostingView = NSHostingView(rootView: view().ignoresSafeArea())
     hostingView.sizingOptions = []
-    contentView = hostingView
+    if #available(macOS 26.0, *) {
+      let glass = NSGlassEffectView()
+      glass.style = Defaults[.clearGlass] ? .clear : .regular
+      glass.cornerRadius = 24
+      glass.contentView = hostingView
+      contentView = glass
+    } else {
+      let material = NSVisualEffectView()
+      material.material = .popover
+      material.blendingMode = .behindWindow
+      material.state = .active
+      hostingView.translatesAutoresizingMaskIntoConstraints = false
+      material.addSubview(hostingView)
+      NSLayoutConstraint.activate([
+        hostingView.leadingAnchor.constraint(equalTo: material.leadingAnchor),
+        hostingView.trailingAnchor.constraint(equalTo: material.trailingAnchor),
+        hostingView.topAnchor.constraint(equalTo: material.topAnchor),
+        hostingView.bottomAnchor.constraint(equalTo: material.bottomAnchor)
+      ])
+      contentView = material
+    }
     contentMinSize = NSSize(width: 900, height: 450)
     applyRoundedCorners()
+  }
+
+  func updateGlassStyle() {
+    if #available(macOS 26.0, *), let glass = contentView as? NSGlassEffectView {
+      glass.style = Defaults[.clearGlass] ? .clear : .regular
+    }
   }
 
   private func applyRoundedCorners() {
