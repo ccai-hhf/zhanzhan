@@ -19,9 +19,9 @@ struct ShelfHistoryCard: View {
         Text(item.application ?? "剪贴板").lineLimit(1)
         Spacer()
         Button { shelf.deleteHistory(item) } label: {
-          Image(systemName: "xmark").font(.system(size: 9, weight: .medium)).frame(width: 20, height: 20)
+          Image(systemName: "xmark").font(.system(size: 12, weight: .medium)).frame(width: 20, height: 20)
         }.buttonStyle(.plain).help("删除记录").accessibilityLabel("删除记录")
-      }.font(.system(size: 10)).foregroundStyle(.secondary).padding(.horizontal, 12).frame(height: 34)
+      }.font(.system(size: 13)).foregroundStyle(.secondary).padding(.horizontal, 12).frame(height: 34)
       Button {
         shelf.choose(item.item)
       } label: {
@@ -31,10 +31,10 @@ struct ShelfHistoryCard: View {
           } else if let url = shelf.webURL(item.item.text) {
             VStack(alignment: .leading, spacing: 9) {
               Text(url.host ?? "网址").font(.system(size: 18, weight: .semibold)).lineLimit(2)
-              Text(url.absoluteString).font(.system(size: 10)).foregroundStyle(.blue).lineLimit(3)
+              Text(url.absoluteString).font(.system(size: 13)).foregroundStyle(.blue).lineLimit(3)
             }.frame(maxWidth: .infinity, alignment: .leading)
           } else {
-            Text(item.item.previewableText).font(.system(size: 12)).lineSpacing(4).lineLimit(5)
+            Text(item.item.previewableText).font(.system(size: 14)).lineSpacing(4).lineLimit(5)
               .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
           }
         }.frame(maxWidth: .infinity, maxHeight: .infinity).padding(.horizontal, 14).padding(.vertical, 10)
@@ -49,7 +49,7 @@ struct ShelfHistoryCard: View {
         Spacer()
         Button { shelf.bookmark(item, folderID: shelf.currentFolderID) } label: { Label("收藏", systemImage: "pin") }
           .buttonStyle(.plain).help("添加到当前收藏文件夹")
-      }.font(.system(size: 9)).foregroundStyle(.secondary).padding(.horizontal, 12).frame(height: 30)
+      }.font(.system(size: 12)).foregroundStyle(.secondary).padding(.horizontal, 12).frame(height: 34)
         .overlay(alignment: .top) { Divider().opacity(0.25) }
     }
     .frame(width: 218, height: 193)
@@ -101,23 +101,23 @@ struct ShelfFavoriteCard: View {
         .clipShape(RoundedRectangle(cornerRadius: 9))
       Button { shelf.chooseFavorite(entry) } label: {
         VStack(alignment: .leading, spacing: 4) {
-          Text(entry.title).font(.system(size: 11, weight: .semibold)).lineLimit(1)
+          Text(entry.title).font(.system(size: 14, weight: .semibold)).lineLimit(1)
           Text(entry.webURL?.host ?? (image == nil ? "文字片段" : "图片"))
-            .font(.system(size: 9)).foregroundStyle(.secondary).lineLimit(1)
+            .font(.system(size: 12)).foregroundStyle(.secondary).lineLimit(1)
         }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
       }.buttonStyle(ShelfPressStyle()).help("单击选中并复制，双击粘贴")
         .simultaneousGesture(TapGesture(count: 2).onEnded {
           shelf.use(shelf.historyItem(for: entry), paste: Defaults[.pasteByDefault])
         })
       VStack(spacing: 10) {
-        Button { shelf.deleteFavorite(entry) } label: { Image(systemName: "xmark").font(.system(size: 8)).frame(width: 16, height: 16) }
+        Button { shelf.deleteFavorite(entry) } label: { Image(systemName: "xmark").font(.system(size: 12)).frame(width: 20, height: 20) }
           .buttonStyle(.plain).help("删除收藏").accessibilityLabel("删除收藏")
         if entry.webURL != nil {
-          Button { shelf.open(entry) } label: { Image(systemName: "arrow.up.right").font(.system(size: 10)) }
+          Button { shelf.open(entry) } label: { Image(systemName: "arrow.up.right").font(.system(size: 13)) }
             .buttonStyle(.plain).help("在浏览器打开").accessibilityLabel("打开网址")
         }
       }.foregroundStyle(.secondary)
-    }.padding(11).frame(width: 185, height: 64)
+    }.padding(11).frame(width: 220, height: 70)
       .background(selected ? Color.blue.opacity(scheme == .dark ? 0.3 : 0.17) : .white.opacity(scheme == .dark ? 0.08 : hovering ? 0.7 : 0.42), in: RoundedRectangle(cornerRadius: 13))
       .overlay(RoundedRectangle(cornerRadius: 13).stroke(selected ? Color.blue : .white.opacity(0.4), lineWidth: selected ? 2 : 1))
       .shadow(color: selected ? .blue.opacity(0.14) : .clear, radius: 8, y: 2)

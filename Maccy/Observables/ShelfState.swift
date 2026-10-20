@@ -124,12 +124,16 @@ final class ShelfState {
       announce("已复制。开启辅助功能后可自动粘贴，也可回到原窗口按 ⌘V。")
       return
     }
-    if !keepOpen { AppState.shared.popup.close() }
     if paste {
-      Task {
-        try? await Task.sleep(for: .milliseconds(120))
-        Clipboard.shared.paste()
+      AppState.shared.popup.close {
+        Task {
+          try? await Task.sleep(for: .milliseconds(120))
+          guard AppState.shared.popup.isClosed() else { return }
+          Clipboard.shared.paste()
+        }
       }
+    } else if !keepOpen {
+      AppState.shared.popup.close()
     }
   }
 

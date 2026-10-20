@@ -18,9 +18,9 @@ struct ShelfSettingsView: View {
     Form {
       Section("启动与唤起") {
         LaunchAtLogin.Toggle("登录后自动启动")
-        Toggle("三指下滑唤起", isOn: $threeFingerSwipe)
+        Toggle("三指下滑唤起、上滑收起", isOn: $threeFingerSwipe)
         Text(gestures.status).font(.caption).foregroundStyle(.secondary)
-        Text("若与系统“应用程序窗口”冲突，请在触控板 → 更多手势中将其改为四指下滑。")
+        Text("若与系统手势冲突，在触控板 → 更多手势中，将“调度中心”改为四指上滑、“应用程序窗口”改为四指下滑或关闭。")
           .font(.caption).foregroundStyle(.secondary)
         Button("打开触控板设置") {
           if let url = URL(string: "x-apple.systempreferences:com.apple.Trackpad-Settings.extension") { NSWorkspace.shared.open(url) }

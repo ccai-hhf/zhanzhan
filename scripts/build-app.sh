@@ -25,7 +25,7 @@ app = pathlib.Path(sys.argv[1])
 info = {
   'CFBundleName': '沾沾', 'CFBundleDisplayName': '沾沾',
   'CFBundleExecutable': 'ZhanZhan', 'CFBundleIdentifier': 'local.zhanzhan.clipboard',
-  'CFBundlePackageType': 'APPL', 'CFBundleShortVersionString': '0.2.0', 'CFBundleVersion': '2',
+  'CFBundlePackageType': 'APPL', 'CFBundleShortVersionString': '0.3.0', 'CFBundleVersion': '3',
   'CFBundleDevelopmentRegion': 'zh-Hans', 'CFBundleIconFile': 'ZhanZhan',
   'LSMinimumSystemVersion': '14.0', 'LSUIElement': True,
   'NSPrincipalClass': 'NSApplication',

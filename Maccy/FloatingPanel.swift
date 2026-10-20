@@ -1,5 +1,6 @@
 import Defaults
 import SwiftUI
+import QuartzCore
 
 // An NSPanel subclass that implements floating panel traits.
 // https://stackoverflow.com/questions/46023769/how-to-show-a-window-without-stealing-focus-on-macos
@@ -7,6 +8,9 @@ class FloatingPanel: NSPanel, NSWindowDelegate {
   var isPresented: Bool = false
   var statusBarButton: NSStatusBarButton?
   let onClose: () -> Void
+  private var transitionID = UUID()
+  private var isClosing = false
+  private var closeCompletions: [() -> Void] = []
 
   override var isMovable: Bool {
     get { Defaults[.popupPosition] != .statusItem }
@@ -107,6 +111,12 @@ class FloatingPanel: NSPanel, NSWindowDelegate {
   }
 
   func open(height: CGFloat, at popupPosition: PopupPosition = Defaults[.popupPosition]) {
+    guard !isPresented else { makeKey(); return }
+    let wasClosing = isClosing
+    transitionID = UUID()
+    isClosing = false
+    closeCompletions.removeAll()
+    ignoresMouseEvents = false
     let size = Defaults[.windowSize]
     let miniumHeight: CGFloat = AppState.shared.popup.minimumHeight
     let activeScreen = NSScreen.screens.first { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) } ?? NSScreen.main
@@ -115,9 +125,21 @@ class FloatingPanel: NSPanel, NSWindowDelegate {
     let finalHeight = min(max(min(height, size.height), miniumHeight), visible.height - 24)
     setContentSize(NSSize(width: finalWidth, height: finalHeight))
     setFrameOrigin(popupPosition.origin(size: frame.size, statusBarButton: statusBarButton))
+    let destination = frame
+    let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+    if !wasClosing {
+      setFrame(destination.offsetBy(dx: 0, dy: reduceMotion ? 0 : -28), display: false)
+      alphaValue = 0
+    }
+    isPresented = true
     orderFrontRegardless()
     makeKey()
-    isPresented = true
+    NSAnimationContext.runAnimationGroup { context in
+      context.duration = reduceMotion ? 0.12 : 0.28
+      context.timingFunction = CAMediaTimingFunction(controlPoints: 0.22, 1, 0.36, 1)
+      animator().setFrame(destination, display: true)
+      animator().alphaValue = 1
+    }
 
     if popupPosition == .statusItem {
       DispatchQueue.main.async {
@@ -243,20 +265,55 @@ class FloatingPanel: NSPanel, NSWindowDelegate {
     }
   }
 
+  /// Run paste only after the panel has relinquished keyboard focus.
+  func close(completion: @escaping () -> Void) {
+    if !isPresented && !isClosing { completion(); return }
+    closeCompletions.append(completion)
+    close()
+  }
+
   override func close() {
-    super.close()
+    guard isPresented, !isClosing else { return }
+    isClosing = true
+    isPresented = false
+    ignoresMouseEvents = true
+    transitionID = UUID()
+    let token = transitionID
+    let destination = frame
+    let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
     let appState = AppState.shared
     appState.preview.state = .closed
     appState.isEditingItem = false
     appState.navigator.isDragAndDropInProgress = false
     appState.navigator.isManualMultiSelect = false
-    isPresented = false
     statusBarButton?.isHighlighted = false
     onClose()
+    NSAnimationContext.runAnimationGroup { context in
+      context.duration = reduceMotion ? 0.1 : 0.20
+      context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+      animator().setFrame(destination.offsetBy(dx: 0, dy: reduceMotion ? 0 : -22), display: true)
+      animator().alphaValue = 0
+    } completionHandler: { [weak self] in
+      MainActor.assumeIsolated {
+        guard let self, self.transitionID == token, self.isClosing else { return }
+        self.finishClosing(restoring: destination)
+      }
+    }
+  }
+
+  private func finishClosing(restoring destination: NSRect) {
+    super.close()
+    setFrame(destination, display: false)
+    alphaValue = 1
+    isClosing = false
+    ignoresMouseEvents = false
+    let completions = closeCompletions
+    closeCompletions.removeAll()
+    completions.forEach { $0() }
   }
 
   // Allow text inputs inside the panel can receive focus
   override var canBecomeKey: Bool {
-    return true
+    return !isClosing
   }
 }

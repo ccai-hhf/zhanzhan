@@ -7,9 +7,11 @@ public struct FingerContact: Equatable, Sendable {
   public init(id: Int, x: Double, y: Double) { self.id = id; self.x = x; self.y = y }
 }
 
-/// Physical downward movement (normalized trackpad Y decreases), independent of natural scrolling.
+/// Physical vertical movement, independent of the natural scrolling preference.
 /// Commits on lift so a transient three-contact frame in a four-finger gesture cannot activate it.
 public struct ThreeFingerSwipe: Sendable {
+  public enum Direction: Sendable { case down, up }
+  public private(set) var direction: Direction = .down
   private var origins: [Int: FingerContact] = [:]
   private var latest: [FingerContact] = []
   private var startedAt = 0.0
@@ -25,8 +27,10 @@ public struct ThreeFingerSwipe: Sendable {
             (0.06...1.2).contains(time - startedAt), time - lastTrigger >= 0.7 else { return false }
       let dx = latest.reduce(0) { $0 + $1.x - origins[$1.id]!.x } / 3
       let dy = latest.reduce(0) { $0 + $1.y - origins[$1.id]!.y } / 3
-      guard dy < -0.13, -dy > abs(dx) * 1.6,
-            latest.allSatisfy({ $0.y - origins[$0.id]!.y < -0.07 }) else { return false }
+      let sign = dy > 0 ? 1.0 : -1.0
+      guard abs(dy) > 0.13, abs(dy) > abs(dx) * 1.6,
+            latest.allSatisfy({ ($0.y - origins[$0.id]!.y) * sign > 0.07 }) else { return false }
+      direction = dy > 0 ? .up : .down
       lastTrigger = time
       return true
     }

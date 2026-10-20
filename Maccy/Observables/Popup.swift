@@ -86,8 +86,10 @@ class Popup {
     KeyboardShortcuts.enable(.popup)
   }
 
-  func close() {
-    AppState.shared.appDelegate?.panel.close()  // close() calls reset
+  func close(completion: (() -> Void)? = nil) {
+    guard let panel = AppState.shared.appDelegate?.panel else { completion?(); return }
+    if let completion { panel.close(completion: completion) }
+    else { panel.close() }
   }
 
   func isClosed() -> Bool {

@@ -46,7 +46,7 @@ final class TrackpadGesture {
     let result = ZZTouchStart(receiveTouchFrame)
     isRunning = result == 0
     status = switch result {
-    case 0: "三指下滑已启用"
+    case 0: "三指下滑唤起、上滑收起已启用"
     case -2: "未检测到可用触控板，可继续使用快捷键"
     default: "当前系统无法读取触控板，可继续使用快捷键"
     }
@@ -56,9 +56,16 @@ final class TrackpadGesture {
     guard isRunning else { return }
     if detector.update(contacts, at: timestamp) {
       recognizedCount += 1
-      guard !AppState.shared.isEditingItem, AppState.shared.popup.isClosed() else { return }
-      History.shared.searchQuery = ""
-      AppState.shared.popup.open(height: 490, at: .bottom)
+      guard !AppState.shared.isEditingItem else { return }
+      let popup = AppState.shared.popup
+      switch detector.direction {
+      case .down where popup.isClosed():
+        History.shared.searchQuery = ""
+        popup.open(height: 490, at: .bottom)
+      case .up where !popup.isClosed():
+        popup.close()
+      default: break
+      }
     }
   }
 }

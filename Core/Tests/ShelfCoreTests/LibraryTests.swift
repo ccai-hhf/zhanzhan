@@ -133,6 +133,7 @@ func threeFingerGestureRejectsOtherGestures() throws {
   try check(!detector.update(frame(3, 0.7), at: 1))
   try check(!detector.update(frame(3, 0.45), at: 1.2))
   try check(detector.update([], at: 1.25))
+  try check(detector.direction == .down)
   try check(!detector.update([], at: 1.3))
   for count in [1, 2, 4] {
     detector = ThreeFingerSwipe()
@@ -140,7 +141,7 @@ func threeFingerGestureRejectsOtherGestures() throws {
     _ = detector.update(frame(count, 0.3), at: 1.2)
     try check(!detector.update([], at: 1.25))
   }
-  for (x,y) in [(0.7,0.7),(0.3,0.9),(0.3,0.66)] {
+  for (x,y) in [(0.7,0.7),(0.3,0.66)] {
     detector = ThreeFingerSwipe()
     _ = detector.update(frame(3, 0.7), at: 1)
     _ = detector.update(frame(3,y,x), at: 1.2)
@@ -169,6 +170,22 @@ func threeFingerLiftAndCooldown() throws {
   try check(detector.update([], at: 4.25))
 }
 
+func threeFingerUpwardSwipe() throws {
+  var detector = ThreeFingerSwipe()
+  let start = (0..<3).map { FingerContact(id: $0, x: Double($0)*0.1, y: 0.3) }
+  let end = (0..<3).map { FingerContact(id: $0, x: Double($0)*0.1, y: 0.6) }
+  try check(!detector.update(start, at: 1))
+  try check(!detector.update(end, at: 1.2))
+  try check(detector.update([], at: 1.25))
+  try check(detector.direction == .up)
+  try check(!detector.update([], at: 1.3))
+  // Adding a fourth finger must also reject upward movement.
+  _ = detector.update(start, at: 3)
+  _ = detector.update(end + [FingerContact(id: 3, x: 0.4, y: 0.6)], at: 3.2)
+  _ = detector.update(end, at: 3.25)
+  try check(!detector.update([], at: 3.3))
+}
+
 private struct TestFailure: Error { let message: String }
 private func check(_ condition: @autoclosure () throws -> Bool, file: String = #fileID, line: Int = #line) throws {
   guard try condition() else { throw TestFailure(message: "Assertion failed at \(file):\(line)") }
@@ -189,7 +206,8 @@ private func expectThrows<T>(_ operation: () throws -> T) throws {
       ("history protects failures, corruption and future versions", historyFailureAndCorruptionAreProtected),
       ("editing payload and forward drag", editingAndForwardDragPreserveContents),
       ("three-finger direction and contact count", threeFingerGestureRejectsOtherGestures),
-      ("three-finger lift and cooldown", threeFingerLiftAndCooldown)
+      ("three-finger lift and cooldown", threeFingerLiftAndCooldown),
+      ("three-finger upward swipe and four-contact rejection", threeFingerUpwardSwipe)
     ]
     for (name, run) in checks { try run(); print("PASS: \(name)") }
     print("\(checks.count) checks passed")

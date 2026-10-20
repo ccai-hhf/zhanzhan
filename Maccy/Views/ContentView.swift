@@ -68,7 +68,7 @@ struct ContentView: View {
   }
 
   private var header: some View {
-    HStack(spacing: 20) {
+    HStack(spacing: 14) {
       HStack(spacing: 9) {
         Image(systemName: "square.on.square")
           .font(.system(size: 15, weight: .semibold)).foregroundStyle(.white)
@@ -85,14 +85,14 @@ struct ContentView: View {
           Button { history.searchQuery = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary) }.buttonStyle(.plain)
         }
       }
-      .font(.system(size: 12)).padding(.horizontal, 12).frame(width: 310, height: 35)
+      .font(.system(size: 14)).padding(.horizontal, 12).frame(width: 290, height: 38)
       .background(.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 11))
       Spacer(minLength: 0)
       if !pasteAccess {
-        Button("开启自动粘贴") { shelf.requestPastePermission() }.buttonStyle(.borderless).font(.system(size: 11))
+        Button("开启自动粘贴") { shelf.requestPastePermission() }.buttonStyle(.borderless).font(.system(size: 14))
       }
       Circle().fill(paused ? Color.orange : Color.green.opacity(0.7)).frame(width: 5, height: 5)
-      Text(paused ? "已暂停记录" : "本地保存").font(.system(size: 10)).foregroundStyle(.secondary)
+      Text(paused ? "已暂停记录" : "本地保存").font(.system(size: 13)).foregroundStyle(.secondary)
       Menu {
         Button("设置…") { AppState.shared.openPreferences() }
         Button("打开数据文件夹") {
@@ -106,8 +106,8 @@ struct ContentView: View {
       } label: { Image(systemName: "ellipsis.circle") }
       .menuStyle(.borderlessButton).fixedSize().help("设置与更多操作")
       Button { AppState.shared.popup.close() } label: {
-        Image(systemName: "xmark").font(.system(size: 10, weight: .medium))
-          .frame(width: 25, height: 25).background(.primary.opacity(0.04), in: Circle())
+        Image(systemName: "xmark").font(.system(size: 13, weight: .medium))
+          .frame(width: 28, height: 28).background(.primary.opacity(0.04), in: Circle())
       }.buttonStyle(.plain).accessibilityLabel("收起面板")
     }.padding(.horizontal, 24).padding(.top, 18).padding(.bottom, 14)
   }
@@ -115,7 +115,7 @@ struct ContentView: View {
   private var favorites: some View {
     VStack(alignment: .leading, spacing: 10) {
       HStack {
-        Label("常用收藏", systemImage: "pin").font(.system(size: 11, weight: .medium)).foregroundStyle(.secondary)
+        Label("常用收藏", systemImage: "pin").font(.system(size: 14, weight: .medium)).foregroundStyle(.secondary)
         ScrollView(.horizontal, showsIndicators: false) {
           HStack(spacing: 5) {
             folderChip("全部", id: "all", folder: nil)
@@ -130,9 +130,9 @@ struct ContentView: View {
           }
         }
         Button { editor = .newFolder } label: { Image(systemName: "folder.badge.plus") }
-          .buttonStyle(.borderless).help("新建文件夹").accessibilityLabel("新建文件夹")
+          .buttonStyle(.borderless).font(.system(size: 15)).help("新建文件夹").accessibilityLabel("新建文件夹")
         Button { editor = .newEntry } label: { Label("添加收藏", systemImage: "plus") }
-          .buttonStyle(.borderless).font(.system(size: 11))
+          .buttonStyle(.borderless).font(.system(size: 14))
       }
       ScrollView(.horizontal) {
         HStack(spacing: 10) {
@@ -140,13 +140,13 @@ struct ContentView: View {
             HStack(spacing: 10) {
               Image(systemName: "tray").font(.system(size: 19)).foregroundStyle(.tertiary)
               Text(history.searchQuery.isEmpty ? "把常用网址、提示词留下来。点击 + 添加，或把历史卡片拖到文件夹。" : "没有匹配的收藏")
-                .font(.system(size: 11)).foregroundStyle(.secondary)
+                .font(.system(size: 14)).foregroundStyle(.secondary)
             }.frame(height: 66)
           }
           ForEach(visibleFavorites) { entry in
             ShelfFavoriteCard(entry: entry, shelf: shelf, edit: { editor = .editEntry(entry.id) })
               .draggable("favorite:\(entry.id.uuidString)")
-              .dropDestination(for: String.self) { tokens, point in shelf.moveFavorite(tokens, before: entry.id, after: point.x > 92) }
+              .dropDestination(for: String.self) { tokens, point in shelf.moveFavorite(tokens, before: entry.id, after: point.x > 110) }
           }
         }.padding(.vertical, 3)
       }.frame(height: 83)
@@ -156,10 +156,10 @@ struct ContentView: View {
   private func folderChip(_ title: String, id: String, folder: ShelfFolder?) -> some View {
     Button { shelf.folderSelection = id } label: {
       HStack(spacing: 4) {
-        if folder != nil { Image(systemName: "folder").font(.system(size: 10)) }
+        if folder != nil { Image(systemName: "folder").font(.system(size: 13)) }
         Text(title).lineLimit(1)
       }
-      .font(.system(size: 10, weight: shelf.folderSelection == id ? .semibold : .regular))
+      .font(.system(size: 13, weight: shelf.folderSelection == id ? .semibold : .regular))
       .padding(.horizontal, 9).padding(.vertical, 5)
       .background(shelf.folderSelection == id ? Color.primary.opacity(0.09) : Color.clear, in: Capsule())
     }.buttonStyle(.plain)
@@ -176,9 +176,9 @@ struct ContentView: View {
       }.pickerStyle(.segmented).labelsHidden().frame(width: 285)
       Spacer()
       if !history.searchQuery.isEmpty || shelf.filter != "全部" {
-        Text("筛选时暂停排序").font(.system(size: 10)).foregroundStyle(.secondary)
+        Text("筛选时暂停排序").font(.system(size: 13)).foregroundStyle(.secondary)
       }
-      Text("\(visibleHistory.count) 条记录").font(.system(size: 10)).foregroundStyle(.secondary)
+      Text("\(visibleHistory.count) 条记录").font(.system(size: 13)).foregroundStyle(.secondary)
     }.padding(.horizontal, 24).padding(.vertical, 13)
   }
 
@@ -190,7 +190,7 @@ struct ContentView: View {
             VStack(spacing: 10) {
               Image(systemName: "doc.on.clipboard").font(.system(size: 26)).foregroundStyle(.tertiary)
               Text(history.searchQuery.isEmpty ? "复制一段文字，记录就会出现在这里" : "没有找到匹配的记录")
-                .font(.system(size: 12)).foregroundStyle(.secondary)
+                .font(.system(size: 14)).foregroundStyle(.secondary)
             }.frame(width: 600, height: 193)
           }
           ForEach(visibleHistory) { item in
@@ -216,11 +216,11 @@ struct ContentView: View {
         Text("esc 收起")
         Label("拖动排序", systemImage: "hand.draw")
         Spacer()
-        Text("三指下滑唤起 · 右键管理收藏")
+        Text("三指 ↓ 唤起 / ↑ 收起")
       }
       Spacer(minLength: 0)
-    }.font(.system(size: 10)).foregroundStyle(.secondary)
-      .padding(.horizontal, 24).frame(height: 35)
+    }.font(.system(size: 12)).foregroundStyle(.secondary)
+      .padding(.horizontal, 24).frame(height: 38)
       .overlay(alignment: .top) { Divider().opacity(0.3) }
   }
 
