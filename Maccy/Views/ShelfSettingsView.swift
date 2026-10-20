@@ -19,6 +19,8 @@ struct ShelfSettingsView: View {
       Section("启动与唤起") {
         LaunchAtLogin.Toggle("登录后自动启动")
         Toggle("三指下滑唤起、上滑收起", isOn: $threeFingerSwipe)
+        Text("面板在鼠标所在位置附近打开，靠近屏幕边缘时自动避让。")
+          .font(.caption).foregroundStyle(.secondary)
         Text(gestures.status).font(.caption).foregroundStyle(.secondary)
         Text("若与系统手势冲突，在触控板 → 更多手势中，将“调度中心”改为四指上滑、“应用程序窗口”改为四指下滑或关闭。")
           .font(.caption).foregroundStyle(.secondary)

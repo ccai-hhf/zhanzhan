@@ -124,7 +124,7 @@ class Popup {
   private func handleFirstKeyDown() {
     guard !AppState.shared.isEditingItem else { return }
 
-    if isClosed() { open(height: 490, at: .bottom) }
+    if isClosed() { open(height: 490, at: .cursor) }
     else { close() }
   }
 

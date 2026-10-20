@@ -61,7 +61,7 @@ final class TrackpadGesture {
       switch detector.direction {
       case .down where popup.isClosed():
         History.shared.searchQuery = ""
-        popup.open(height: 490, at: .bottom)
+        popup.open(height: 490, at: .cursor)
       case .up where !popup.isClosed():
         popup.close()
       default: break

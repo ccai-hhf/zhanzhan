@@ -119,12 +119,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     Task {
       do { try await History.shared.load() }
       catch { ShelfState.shared.errorMessage = "历史加载失败：\(error.localizedDescription)" }
-      panel.open(height: 490, at: .bottom)
+      panel.open(height: 490, at: .cursor)
     }
   }
 
   func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-    panel.open(height: 490, at: .bottom)
+    panel.open(height: 490, at: .cursor)
     return true
   }
 
@@ -202,7 +202,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
       return
     }
 
-    panel.toggle(height: AppState.shared.popup.height, at: .bottom)
+    panel.toggle(height: AppState.shared.popup.height, at: .cursor)
   }
 
   private func synchronizeMenuIconText() {

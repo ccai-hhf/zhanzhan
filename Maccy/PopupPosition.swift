@@ -66,20 +66,23 @@ enum PopupPosition: String, CaseIterable, Identifiable, CustomStringConvertible,
     }
 
     let mouseLocation = NSEvent.mouseLocation
-    let point = NSPoint(x: mouseLocation.x, y: mouseLocation.y - size.height)
+    // Center the shelf around the invocation point, then keep it on that display.
+    // Anchoring a large shelf below the pointer would clamp it to the bottom too often.
+    let point = NSPoint(x: mouseLocation.x - size.width / 2, y: mouseLocation.y - size.height / 2)
     let screen = NSScreen.screens.first { NSMouseInRect(mouseLocation, $0.frame, false) }
     return constrained(point, ofSize: size, to: screen)
   }
 
   // Ensure that window doesn't spill over to an adjacent screen.
   private func constrained(_ origin: NSPoint, ofSize size: NSSize, to screen: NSScreen?) -> NSPoint {
-    guard let frame = screen?.visibleFrame else {
+    guard let visibleFrame = screen?.visibleFrame else {
       return origin
     }
 
+    let frame = visibleFrame.insetBy(dx: 12, dy: 12)
     return NSPoint(
-      x: min(max(origin.x, frame.minX), frame.maxX - size.width),
-      y: min(max(origin.y, frame.minY), frame.maxY - size.height)
+      x: min(max(origin.x, frame.minX), max(frame.minX, frame.maxX - size.width)),
+      y: min(max(origin.y, frame.minY), max(frame.minY, frame.maxY - size.height))
     )
   }
 }
