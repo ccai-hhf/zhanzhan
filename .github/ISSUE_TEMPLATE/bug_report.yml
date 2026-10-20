@@ -1,57 +1,25 @@
----
-name: 🐛 Bug Report
-description: Submit a Bug Report
+name: 问题反馈 / Bug report
+description: 报告沾沾的问题（请勿上传真实剪贴板内容）
 labels: [bug]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        Thank you for taking the time to complete this bug report!
-        This will help to find the cause of the issue faster and requires fewer follow-ups.
-  - type: checkboxes
-    attributes:
-      label: Before Submitting Your Bug Report
-      options:
-        - label: I have verified that there isn't already an issue reporting the same bug to prevent duplication.
-          required: false
-        - label: I have seen the [FAQ](https://github.com/p0deje/Maccy?tab=readme-ov-file#faq).
-          required: false
   - type: input
+    id: version
     attributes:
-      label: Maccy Version (see 'About' window)
-      placeholder: e.g. 0.29.0
+      label: 沾沾版本
+      placeholder: 0.3.1
     validations:
-      required: false
+      required: true
   - type: input
+    id: system
     attributes:
-      label: macOS Version
-      placeholder: e.g. 13.5.2
+      label: macOS 版本、芯片和触控板型号
+      placeholder: macOS 26.5 / M2 / 内置触控板
     validations:
-      required: false
+      required: true
   - type: textarea
+    id: steps
     attributes:
-      label: Maccy Settings
-      description: Provide the output from running 'defaults read org.p0deje.Maccy' in Terminal.app.
-      render: Shell
+      label: 复现步骤、预期和实际结果
+      description: 请用示例文字复现，不要上传 History.json、Favorites.json 或真实剪贴板内容。
     validations:
-      required: false
-  - type: textarea
-    attributes:
-      label: Description
-      description: Please provide a clear and concise description of the bug.
-      placeholder: Short description
-    validations:
-      required: false
-  - type: textarea
-    attributes:
-      label: Steps to Reproduce
-      description: |
-        Provide the steps to consistently reproduce the issue. If possible, record a screen video
-        demonstrating the problem using QuickTime.app.
-      placeholder: |
-        1. Navigate to …
-        2. Click on …
-        3. Scroll down to …
-        4. Observe …
-    validations:
-      required: false
+      required: true

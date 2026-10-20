@@ -8,3 +8,12 @@ Maccy/.DS_Store
 .swiftpm/
 Core/.build/
 dist/
+
+# Local credentials, logs and generated release assets
+.env
+.env.*
+*.p12
+*.p8
+*.pem
+*.key
+*.log
